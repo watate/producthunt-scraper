@@ -18,6 +18,9 @@ const fastcsv = require('fast-csv');
   // Select all items in the homepage section
   let items = await page.$$('div[data-test="homepage-section-0"] > div');
 
+  // Array to store CSV data
+  const csvData = [];
+
   for (let i = 0; i < items.length; i++) {
     // Re-select items because navigating away and back to the page makes the DOM references stale
     items = await page.$$('div[data-test="homepage-section-0"] > div');
@@ -47,23 +50,24 @@ const fastcsv = require('fast-csv');
 
         console.log(`Upvoter URLs for ${title}:`, upvoterUrls);
 
-        // Prepare CSV data
-        const csvData = upvoterUrls.map(url => ({ title: title, url: url }));
+        // Add data to CSV array
+        upvoterUrls.forEach(url => {
+          csvData.push({ title: title, url: url });
+        });
 
         // Write data to CSV file
         const writeStream = fs.createWriteStream('upvoter_urls.csv', { flags: 'a' });
-        fastcsv
-          .write(csvData, { headers: i === 0 }) // Write headers only for the first product
-          .pipe(writeStream)
-          .on('finish', () => {
-            console.log(`CSV data for ${title} written successfully`);
-          })
-          .on('error', err => {
-            console.error('Error writing CSV file', err);
-          });
+        const csvStream = fastcsv.format({ headers: i === 0 });
+        csvStream.pipe(writeStream).on('end', () => process.exit());
 
-        // Close the stream after writing
-        writeStream.end();
+        csvData.forEach(row => {
+          csvStream.write(row);
+        });
+
+        csvStream.end();
+
+        // Clear the CSV data array for the next product
+        csvData.length = 0;
 
         // Navigate back to the homepage
         await page.goto('https://www.producthunt.com/', { waitUntil: 'networkidle0' });
