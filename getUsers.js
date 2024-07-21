@@ -1,4 +1,6 @@
 const puppeteer = require('puppeteer');
+const fs = require('fs');
+const fastcsv = require('fast-csv');
 
 (async () => {
   const browser = await puppeteer.launch({ headless: false });
@@ -44,6 +46,24 @@ const puppeteer = require('puppeteer');
         );
 
         console.log(`Upvoter URLs for ${title}:`, upvoterUrls);
+
+        // Prepare CSV data
+        const csvData = upvoterUrls.map(url => ({ title: title, url: url }));
+
+        // Write data to CSV file
+        const writeStream = fs.createWriteStream('upvoter_urls.csv', { flags: 'a' });
+        fastcsv
+          .write(csvData, { headers: i === 0 }) // Write headers only for the first product
+          .pipe(writeStream)
+          .on('finish', () => {
+            console.log(`CSV data for ${title} written successfully`);
+          })
+          .on('error', err => {
+            console.error('Error writing CSV file', err);
+          });
+
+        // Close the stream after writing
+        writeStream.end();
 
         // Navigate back to the homepage
         await page.goto('https://www.producthunt.com/', { waitUntil: 'networkidle0' });
