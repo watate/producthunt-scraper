@@ -52,20 +52,10 @@ const puppeteer = require('puppeteer');
 
           console.log('Social Links:', socialLinks);
 
-          // Go back to the previous page (post page)
-          await Promise.all([
-            page.goBack({ waitUntil: 'networkidle0' }),
-            page.waitForSelector('#comments')
-          ]);
         } else {
           console.log('Maker profile link not found.');
         }
 
-        // Go back to the main page to process the next item
-        await Promise.all([
-          page.goBack({ waitUntil: 'networkidle0' }),
-          page.waitForSelector('div[data-test="homepage-section-0"]')
-        ]);
       } else {
         console.log('Title link not found.');
       }
