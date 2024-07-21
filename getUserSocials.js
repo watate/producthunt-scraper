@@ -14,13 +14,9 @@ const puppeteer = require('puppeteer');
   await page.waitForSelector('div[data-test="homepage-section-0"]');
 
   // Select all items in the homepage section
-  let items = await page.$$('div[data-test="homepage-section-0"] > div');
+  const items = await page.$$('div[data-test="homepage-section-0"] > div');
 
-  for (let i = 0; i < items.length; i++) {
-    // Re-select items because navigating away and back to the page makes the DOM references stale
-    items = await page.$$('div[data-test="homepage-section-0"] > div');
-
-    const item = items[i];
+  for (let item of items) {
     try {
       // Extract the title
       const title = await item.$eval('a[data-test^="post-name-"]', el => el.innerText);
@@ -35,18 +31,30 @@ const puppeteer = require('puppeteer');
           page.waitForNavigation({ waitUntil: 'networkidle0' })
         ]);
 
-        // Wait for the upvoters section to load
-        await page.waitForSelector('a[data-test^="user-image-link-"]');
+        // Wait for the comments section to load
+        await page.waitForSelector('#comments');
 
-        // Extract the URLs of upvoters
-        const upvoterUrls = await page.$$eval('a[data-test^="user-image-link-"]', links =>
-          links.map(link => link.href)
-        );
+        // Find the maker's profile link and click it
+        const makerProfileLink = await page.$('a[data-test^="user-image-link-"]');
+        if (makerProfileLink) {
+          await Promise.all([
+            makerProfileLink.click(),
+            page.waitForNavigation({ waitUntil: 'networkidle0' })
+          ]);
 
-        console.log(`Upvoter URLs for ${title}:`, upvoterUrls);
+          // Log the URL of the maker's profile page
+          console.log(`Navigated to maker's profile page: ${page.url()}`);
 
-        // Navigate back to the homepage
-        await page.goto('https://www.producthunt.com/', { waitUntil: 'networkidle0' });
+          // Extract and print all social links
+          const socialLinks = await page.$$eval('a[data-test="user-link"]', links =>
+            links.map(link => ({ text: link.innerText, href: link.href }))
+          );
+
+          console.log('Social Links:', socialLinks);
+
+        } else {
+          console.log('Maker profile link not found.');
+        }
 
       } else {
         console.log('Title link not found.');
